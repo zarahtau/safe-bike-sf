@@ -1,4 +1,7 @@
-![bikeshare](https://github.com/zarahtau/safe-bike-sf/assets/136948242/12f7b753-551c-4825-a027-6481b27b3121)
+<p align="center">
+  <img src="https://github.com/zarahtau/safe-bike-sf/assets/136948242/12f7b753-551c-4825-a027-6481b27b3121" width="500" alt="Bikeshare Lot Image">
+</p>
+
 # SafeBikeSF
 **SafeBikeSF is a mobile app for safer cycling in San Francisco, powered by data insights.**
 ## Abstract
@@ -14,3 +17,9 @@ Individual cyclists and bike sharing companies benefit from SafeBikeSF, enabling
 
 ## Importance
 SafeBikeSF addresses the safety concerns of urban cyclists by providing real-time safety information and reducing biking risks.
+
+## Team Members
+- Bhavika Sodagum
+- Labibeh Taghizadeh
+- Zarah Taufique
+
