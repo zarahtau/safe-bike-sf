@@ -1,0 +1,83 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2709
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red44\green55\blue61;\red204\green0\blue78;\red255\green255\blue255;
+\red204\green0\blue78;\red39\green78\blue204;\red0\green0\blue0;\red42\green55\blue62;\red21\green129\blue62;
+}
+{\*\expandedcolortbl;;\cssrgb\c22745\c27843\c30588;\cssrgb\c84706\c10588\c37647;\cssrgb\c100000\c100000\c100000;
+\cssrgb\c84706\c10588\c37647;\cssrgb\c20000\c40392\c83922;\cssrgb\c0\c0\c0;\cssrgb\c21569\c27843\c30980;\cssrgb\c5098\c56471\c30980;
+}
+\margl1440\margr1440\vieww25700\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs24 \cf2 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf3 \cb4 \strokec3 -- optimized query to join SFFD service calls with neighborhood boundaries\
+\
+\pard\pardeftab720\partightenfactor0
+\cf5 \cb4 \outl0\strokewidth0 -- create a new table from the service calls limiting the table to specific attributes\cf2 \cb1 \outl0\strokewidth0 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf6 \cb4 \strokec6 CREATE\cf2 \strokec2  \cf6 \strokec6 TABLE\cf2 \strokec2  \strokec7 my_dataset.sffd_service_calls\cb1 \strokec2 \
+\cf6 \cb4 \strokec6 PARTITION\cf2 \strokec2  \cf6 \strokec6 BY\cf2 \strokec2  \cf6 \strokec6 TIMESTAMP_TRUNC\cf8 \strokec8 (\cf2 \strokec7 received_timestamp\strokec2 , \strokec7 MONTH\cf8 \strokec8 ) \cf5 \cb4 \outl0\strokewidth0 -- create a partition by month\cf2 \cb1 \outl0\strokewidth0 \strokec2 \
+\cf6 \cb4 \strokec6 AS\cf2 \cb1 \strokec2 \
+\cf6 \cb4 \strokec6 SELECT\cf2 \strokec2  \strokec7 received_timestamp\strokec2 , \strokec7 on_scene_timestamp\strokec2 , \strokec7 zipcode_of_incident\strokec2 , \strokec7 longitude\strokec2 , \strokec7 latitude\strokec2 , \strokec7 call_type\cb1 \strokec2 \
+\cf6 \cb4 \strokec6 FROM\cf2 \strokec2  \cf9 \strokec9 `bigquery-public-data.san_francisco.sffd_service_calls`\cf2 \cb1 \strokec2 \
+\cf6 \cb4 \strokec6 WHERE\cf2 \strokec2  \strokec7 received_timestamp\strokec2  \cf6 \strokec6 IS\cf2 \strokec2  \cf6 \strokec6 NOT\cf2 \strokec2  \cf6 \strokec6 NULL\cf2 \cb1 \strokec2 \
+\cb4  \cf6 \strokec6 AND\cf2 \strokec2  \strokec7 on_scene_timestamp\strokec2  \cf6 \strokec6 IS\cf2 \strokec2  \cf6 \strokec6 NOT\cf2 \strokec2  \cf6 \strokec6 NULL\cf2 \cb1 \strokec2 \
+\cb4  \cf6 \strokec6 AND\cf2 \strokec2  \strokec7 zipcode_of_incident\strokec2  \cf6 \strokec6 IS\cf2 \strokec2  \cf6 \strokec6 NOT\cf2 \strokec2  \cf6 \strokec6 NULL\cf2 \cb1 \strokec2 \
+\cb4  \cf6 \strokec6 AND\cf2 \strokec2  \cf8 \strokec8 (\cf2 \strokec7 call_type\strokec2  = \cf9 \strokec9 "Medical Incident"\cf2 \strokec2  \cf6 \strokec6 OR\cf2 \strokec2  \strokec7 call_type\strokec2  = \cf9 \strokec9 "Traffic Collision"\cf8 \strokec8 )\cf2 \cb1 \strokec2 \
+\cb4  \cf6 \strokec6 AND\cf2 \strokec2  \strokec7 on_scene_timestamp\strokec2  \cf8 \strokec8 >\cf2 \strokec2  \strokec7 received_timestamp\strokec2 ;\cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf6 \cb4 \strokec6 \
+WITH\cf2 \strokec2  \strokec7 geopoint_sffd\strokec2  \cf6 \strokec6 AS\cf2 \strokec2  \cf8 \strokec8 (\cf2 \cb1 \strokec2 \
+\cf6 \cb4 \strokec6 SELECT\cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb4  \strokec7 latitude\strokec2 ,\cb1 \
+\cb4  \strokec7 longitude\strokec2 ,\cb1 \
+\cb4  \strokec7 on_scene_timestamp\strokec2 ,\cb1 \
+\cb4  \strokec7 received_timestamp\strokec2 ,\cb1 \
+\cb4  \strokec7 zipcode_of_incident\strokec2 ,\cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf6 \cb4 \strokec6 ST_GEOGPOINT\cf8 \strokec8 (\cf2 \strokec7 longitude\strokec2 , \strokec7 latitude\cf8 \strokec8 )\cf2 \strokec2  \cf6 \strokec6 AS\cf2 \strokec2  \strokec7 geo_point\strokec2  \cf3 \strokec3 -- creating a geographing point from latitude and longitude\cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb4  \cf6 \strokec6 FROM\cf2 \strokec2  \cf9 \strokec9 `cmpe138-project1.my_dataset.sffd_service_calls`\cf2 \strokec2  \cf3 \strokec3 -- use the new partitioned table    \cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf8 \cb4 \strokec8 )\cf2 \strokec2 ,\cb1 \
+\
+\
+\pard\pardeftab720\partightenfactor0
+\cf3 \cb4 \strokec3 -- subquery to join SFFD service calls with neighborhood boundaries\cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb4 \strokec7 neighborhood_incidents\strokec2  \cf6 \strokec6 AS\cf8 \strokec8 (\cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf6 \cb4 \strokec6 SELECT\cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb4  \strokec7 n.neighborhood\strokec2 ,\cb1 \
+\cb4  \strokec7 p.on_scene_timestamp\strokec2 ,\cb1 \
+\cb4  \strokec7 p.received_timestamp\strokec2 ,\cb1 \
+\cb4  \strokec7 p.geo_point\strokec2 ,\cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf6 \cb4 \strokec6 FROM\cf2 \strokec2  \strokec7 geopoint_sffd\strokec2  \cf6 \strokec6 AS\cf2 \strokec2  \strokec7 p\strokec2  \cf3 \strokec3 -- use the location of the incident as a souce\cf2 \cb1 \strokec2 \
+\cf6 \cb4 \strokec6 JOIN\cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb4  \cf8 \strokec8 (\cf6 \strokec6 SELECT\cf2 \cb1 \strokec2 \
+\cb4    \strokec7 neighborhood\strokec2 ,\cb1 \
+\cb4    \strokec7 neighborhood_geom\strokec2  \cf6 \strokec6 AS\cf2 \strokec2  \strokec7 geo_polygon\strokec2   \cf3 \strokec3 -- select the neighborhood and its polygon\cf2 \cb1 \strokec2 \
+\cb4    \cf6 \strokec6 FROM\cf2 \strokec2  \cf9 \strokec9 `bigquery-public-data.san_francisco_neighborhoods.boundaries`\cf2 \cb1 \strokec2 \
+\cb4  \cf8 \strokec8 )\cf2 \cb1 \strokec2 \
+\cb4  \cf6 \strokec6 AS\cf2 \strokec2  \strokec7 n\strokec2  \cf6 \strokec6 ON\cf2 \strokec2  \cf6 \strokec6 ST_CONTAINS\cf8 \strokec8 (\cf2 \strokec7 n.geo_polygon\strokec2 , \strokec7 p.geo_point\cf8 \strokec8 )\cf2 \strokec2  \cf3 \strokec3 -- join condition that the SFFD point is within the neighborhood polygon\cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf8 \cb4 \strokec8 )\cf2 \cb1 \strokec2 \
+\
+\
+\pard\pardeftab720\partightenfactor0
+\cf3 \cb4 \strokec3 -- selecting the neighborhood and calculating the average response time for each neighborhood\cf2 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf6 \cb4 \strokec6 SELECT\cf2 \strokec2  \strokec7 neighborhood\strokec2 , \cf6 \strokec6 AVG\cf8 \strokec8 (\cf2 \strokec7 on_scene_timestamp\cf8 \strokec8 -\cf2 \strokec7 received_timestamp\cf8 \strokec8 )\cf2 \strokec2  \cf6 \strokec6 AS\cf2 \strokec2  \strokec7 average_response_time\cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb4  \cf6 \strokec6 FROM\cf2 \strokec2  \strokec7 neighborhood_incidents\cb1 \strokec2 \
+\cb4  \cf6 \strokec6 GROUP\cf2 \strokec2  \cf6 \strokec6 BY\cf2 \strokec2  \strokec7 neighborhood\strokec2  \cf3 \strokec3 -- group by neighborhood to find the averages per neighborhood\cf2 \cb1 \strokec2 \
+\cb4  \cf6 \strokec6 ORDER\cf2 \strokec2  \cf6 \strokec6 BY\cf2 \strokec2  \strokec7 average_response_time\strokec2  \cf6 \strokec6 ASC\cf2 \strokec2 ;\cb1 \
+\
+}
