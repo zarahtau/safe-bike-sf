@@ -14,4 +14,6 @@ This query calculates the average total response time for medical incidents in e
 ### 2. Neighborhood Coordinates
 This query retrieves the latitude and longitude coordinates of a medical and traffic collision response service and maps it to its respective neighborhood.
 ### 3. Average Response Time by Neighborhood
-This query computs the average response time for incidents within specific neighborhoods.
+This query computes the average response time for incidents within specific neighborhoods.
+### 4. Optimized Response Time by Neighborhood
+To enhance the efficiency of our data analysis, we have implemented a partitioned table that organizes the received_timestamp by month. This table specifically includes only those attributes that are essential for our analysis—such as received_timestamp, on_scene_timestamp, zipcode_of_incident, longitude, latitude, and call_type. This leads to lower costs and speeds up query execution. 
