@@ -1,0 +1,196 @@
+﻿APPROACH
+
+
+1. Finding Safest Neighborhoods:
+Datasets used: 
+* bigquery-public-data.san_francisco.sfpd_incidents
+* Bigquery-public-data.san_francisco_neighborhoods.boundaries
+SQL Code: 
+SELECT n.neighborhood, COUNT(i.unique_key) AS crime_count
+FROM bigquery-public-data.san_francisco_neighborhoods.boundaries n
+LEFT JOIN bigquery-public-data.san_francisco.sfpd_incidents i ON n.internal_point_latitude = i.latitude AND n.internal_point_longitude = i.longitude
+GROUP BY n.neighborhood
+ORDER BY crime_count;
+
+
+Result: Got all neighborhoods crimecount 0 - which means there are no exact matches found if we are comparing just latitudes and longitudes - should optimize.
+
+
+To see common between 2 tables-incidents and neighborhood:
+
+
+1. Joining on latitudes and longitudes
+SELECT n.neighborhood, i.unique_key, i.latitude, i.longitude
+FROM bigquery-public-data.san_francisco_neighborhoods.boundaries n
+INNER JOIN bigquery-public-data.san_francisco.sfpd_incidents i ON n.internal_point_latitude = i.latitude AND n.internal_point_longitude = i.longitude;
+
+
+-Nothing common
+
+
+2) using ST_Intersects:
+
+
+SELECT n.neighborhood, i.latitude, i.longitude, i.unique_key
+FROM bigquery-public-data.san_francisco.sfpd_incidents i
+INNER JOIN bigquery-public-data.san_francisco_neighborhoods.boundaries n
+ON ST_Intersects(ST_GeogPoint(i.longitude, i.latitude), n.neighborhood_geom);
+
+
+Result - found latitude and longitude of incidents in neighborhood geometry polygon, so found the incidents in neighborhoods. 
+
+
+
+
+
+
+
+
+
+
+
+
+Now combining both and fetching results:
+
+
+
+
+SQL Code:
+SELECT neighborhood, COUNT(*) AS crime_count
+FROM (
+   SELECT n.neighborhood
+   FROM bigquery-public-data.san_francisco.sfpd_incidents i
+   JOIN bigquery-public-data.san_francisco_neighborhoods.boundaries n ON ST_Intersects(ST_GeogPoint(i.longitude, i.latitude), n.neighborhood_geom)
+) AS incident_neighborhoods
+GROUP BY neighborhood
+ORDER BY crime_count;
+
+
+Result: Found Safest neighborhoods with low-high crime count.
+
+
+
+
+B) To find safest stations:
+
+
+Datasets used: 
+* bigquery-public-data.san_francisco.sfpd_incidents
+* bigquery-public-data.san_francisco.bikeshare_stations
+
+
+SQL Code:
+WITH StationCrimeCounts AS (
+ SELECT
+   bs.station_id,
+   bs.name AS station_name,
+   COUNT(*) AS crime_count
+ FROM
+   bigquery-public-data.san_franciso.bikeshare_stations bs
+ JOIN
+   bigquery-public-data.san_francisco.sfpd_incidents i ON i.latitude = bs.latitude AND i.longitude = bs.longitude
+ GROUP BY
+   bs.station_id, bs.name
+)
+SELECT
+ station_id,
+ station_name,
+ crime_count
+FROM
+ StationCrimeCounts
+ORDER BY
+ crime_count;
+
+
+Result: Found safest bikeshare stations but when comparing latitudes and longitudes of incidents and stations, there was nothing common - should optimize
+
+
+
+
+
+
+C) Stations and neighborhoods:
+
+
+Datasets used: 
+* bigquery-public-data.san_francisco_neighborhoods.boundaries
+* Bigquery-public-data.san_francisco.bikeshare_stations
+
+
+SQL code:
+SELECT  bs.station_id,
+   bs.name AS station_name,
+   nb.neighborhood
+FROM `bigquery-public-data.san_francisco.bikeshare_stations` bs
+
+
+JOIN
+   bigquery-public-data.san_francisco_neighborhoods.boundaries nb
+ON  ST_Intersects(ST_GeogPoint(bs.longitude, bs.latitude), nb.neighborhood_geom)
+
+
+
+
+Result: Got stations and their  corresponding neighborhoods
+
+
+
+
+D) SAFEST STATIONS :
+
+
+Datasets used: 
+* bigquery-public-data.san_francisco.sfpd_incidents
+* bigquery-public-data.san_francisco_neighborhoods.boundaries
+* bigquery-public-data.san_francisco.bikeshare_stations
+
+
+SQL Code: 
+WITH station_neighborhoods AS (
+   SELECT
+       bs.station_id,
+       bs.name AS station_name,
+       nb.neighborhood
+   FROM `bigquery-public-data.san_francisco.bikeshare_stations` bs
+   JOIN
+       bigquery-public-data.san_francisco_neighborhoods.boundaries nb
+   ON 
+       ST_Intersects(ST_GeogPoint(bs.longitude, bs.latitude), nb.neighborhood_geom)
+),
+
+
+neighborhood_crime_counts AS (
+   SELECT
+       neighborhood,
+       COUNT(*) AS crime_count
+   FROM (
+       SELECT
+           n.neighborhood
+       FROM
+           bigquery-public-data.san_francisco.sfpd_incidents i
+       JOIN
+           bigquery-public-data.san_francisco_neighborhoods.boundaries n
+       ON
+           ST_Intersects(ST_GeogPoint(i.longitude, i.latitude), n.neighborhood_geom)
+   ) AS incident_neighborhoods
+   GROUP BY
+       neighborhood
+)
+
+
+SELECT
+   sn.station_id,
+   sn.station_name,
+   sn.neighborhood,
+   ncc.crime_count
+FROM
+   station_neighborhoods sn
+JOIN
+   neighborhood_crime_counts ncc
+ON
+   sn.neighborhood = ncc.neighborhood
+ORDER BY
+   ncc.crime_count ASC; -- Ordering by crime count in ascending order
+
+
+Result: Got safest stations when combined the safest neighborhoods and stations-corresponding-neighborhoods relations. Hence found the safest stations in SF with low to high crime count.
