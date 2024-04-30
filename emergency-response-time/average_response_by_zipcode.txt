@@ -1,0 +1,10 @@
+-- Selecting the average time taken to respond to an incident and the corresponding zip code
+SELECT AVG(on_scene_timestamp - received_timestamp) AS average_total_response_time, zipcode_of_incident
+  	FROM `bigquery-public-data.san_francisco.sffd_service_calls` – access the dataset
+  	WHERE on_scene_timestamp IS NOT NULL – ensure there is a record for each
+	AND received_timestamp IS NOT NULL
+  	AND zipcode_of_incident IS NOT NULL
+  	AND call_type = "Medical Incident"
+  	AND on_scene_timestamp > received_timestamp – ensure the on_scene is after the received
+  	GROUP BY zipcode_of_incident -- find the average per neighborhood in San Francisco
+  	ORDER BY average_total_response_time ASC -- find the fastest average response time

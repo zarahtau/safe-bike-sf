@@ -1,0 +1,21 @@
+--select the neighborhood, latitude and longitude of SFFD calls
+SELECT
+	Neighborhoods.neighborhood, 
+	points.latitude, -- representative of the location of the SFFD call
+	points.longitude
+FROM
+	(SELECT
+		latitude,
+   		longitude,
+   		ST_GEOGPOINT(longitude, latitude) AS geo_point -- create a geography value from the given latitudes and longitude
+ 	FROM `bigquery-public-data.san_francisco.sffd_service_calls`
+ ) 
+ AS points --creating a subquery for SFFD call points
+JOIN
+ 	(SELECT
+   		neighborhood,
+   		neighborhood_geom AS geo_polygon  -- selecting the neighborhood and its geographic polygon
+ 	FROM `bigquery-public-data.san_francisco_neighborhoods.boundaries`
+ ) 
+ AS neighborhoods
+	ON ST_CONTAINS(neighborhoods.geo_polygon, points.geo_point); -- join condition where SFFD call is within the neighborhood polygon
