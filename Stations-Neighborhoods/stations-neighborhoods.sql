@@ -1,0 +1,9 @@
+SELECT  bs.station_id,
+   bs.name AS station_name,
+   nb.neighborhood
+FROM `bigquery-public-data.san_francisco.bikeshare_stations` bs
+
+
+JOIN
+   bigquery-public-data.san_francisco_neighborhoods.boundaries nb
+ON  ST_Intersects(ST_GeogPoint(bs.longitude, bs.latitude), nb.neighborhood_geom)
