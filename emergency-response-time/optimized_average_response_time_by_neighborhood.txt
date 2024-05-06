@@ -1,0 +1,58 @@
+-- optimized subquery to join SFFD service calls with neighborhood boundaries
+CREATE TABLE my_dataset.sffd_service_calls
+PARTITION BY TIMESTAMP_TRUNC(received_timestamp, MONTH)
+AS
+SELECT received_timestamp, on_scene_timestamp, zipcode_of_incident, longitude, latitude, call_type
+FROM `bigquery-public-data.san_francisco.sffd_service_calls`
+WHERE received_timestamp IS NOT NULL
+AND on_scene_timestamp IS NOT NULL
+AND zipcode_of_incident IS NOT NULL
+AND (call_type = "Medical Incident" OR call_type = "Traffic Collision")
+AND on_scene_timestamp > received_timestamp;
+
+
+WITH
+ geopoint_sffd AS (
+ SELECT
+   latitude,
+   longitude,
+   on_scene_timestamp,
+   received_timestamp,
+   ST_GEOGPOINT(longitude, latitude) AS geo_point -- creating a geographing point from latitude and longitude
+ FROM
+   `cmpe138-project1.my_dataset.sffd_service_calls` -- use the new partitioned table
+   ),
+ neighborhood_geometry AS(
+
+SELECT
+   neighborhood,
+   neighborhood_geom AS geo_polygon  -- select the neighborhood and its polygon
+ FROM
+   `bigquery-public-data.san_francisco_neighborhoods.boundaries` ),
+ -- subquery to join SFFD service calls with neighborhood boundaries
+ neighborhood_incidents AS(
+
+SELECT
+   n.neighborhood,
+   p.on_scene_timestamp,
+   p.received_timestamp,
+   p.geo_point,
+ FROM
+   geopoint_sffd AS p -- use the location of the incident as a souce
+ JOIN
+   neighborhood_geometry AS n
+ ON
+   ST_CONTAINS(n.geo_polygon, p.geo_point) -- join condition that the SFFD point is within the neighborhood polygon
+   )
+ -- selecting the neighborhood and calculating the average response time for each neighborhood
+SELECT
+ neighborhood,
+ AVG(TIMESTAMP_DIFF(on_scene_timestamp,received_timestamp, MINUTE)) AS average_response_time
+FROM
+ neighborhood_incidents
+GROUP BY
+ neighborhood -- group by neighborhood to find the averages per neighborhood
+ORDER BY
+ average_response_time ASC;
+
+
